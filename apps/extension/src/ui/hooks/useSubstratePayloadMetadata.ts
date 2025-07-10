@@ -1,22 +1,23 @@
 import { merkleizeMetadata } from "@polkadot-api/merkleize-metadata"
 import { assert, hexToNumber, u8aToHex } from "@polkadot/util"
-import { Chain, Token } from "@talismn/chaindata-provider"
+import { DotNetwork, isNetworkDot, Token } from "@talismn/chaindata-provider"
 import { getScaleApi } from "@talismn/sapi"
+import { decAnyMetadata, unifyMetadata } from "@talismn/scale"
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query"
 import { SignerPayloadJSON } from "extension-core"
 import { log } from "extension-shared"
 
 import { api } from "@ui/api"
-import { useChainByGenesisHash, useToken } from "@ui/state"
+import { useNetworkByGenesisHash, useToken } from "@ui/state"
 import { getFrontendTypeRegistry } from "@ui/util/getFrontendTypeRegistry"
 
 export const useSubstratePayloadMetadata = (payload: SignerPayloadJSON | null) => {
-  const chain = useChainByGenesisHash(payload?.genesisHash)
-  const token = useToken(chain?.nativeToken?.id)
+  const network = useNetworkByGenesisHash(payload?.genesisHash)
+  const token = useToken(network?.nativeTokenId)
 
   return useQuery({
-    queryKey: ["useSubstratePayloadMetadata", payload, chain?.id, token?.id],
-    queryFn: () => getSubstratePayloadMetadata({ payload, chain, token }),
+    queryKey: ["useSubstratePayloadMetadata", payload, network?.id, token?.id],
+    queryFn: () => getSubstratePayloadMetadata({ payload, network, token }),
     retry: false,
     refetchInterval: false,
     refetchOnWindowFocus: false,
@@ -25,12 +26,12 @@ export const useSubstratePayloadMetadata = (payload: SignerPayloadJSON | null) =
 }
 
 export const useSubstratePayloadMetadataSuspense = (payload: SignerPayloadJSON | null) => {
-  const chain = useChainByGenesisHash(payload?.genesisHash)
-  const token = useToken(chain?.nativeToken?.id)
+  const network = useNetworkByGenesisHash(payload?.genesisHash)
+  const token = useToken(network?.nativeTokenId)
 
   return useSuspenseQuery({
-    queryKey: ["useSubstratePayloadMetadata", payload, chain?.id, token?.id],
-    queryFn: () => getSubstratePayloadMetadata({ payload, chain, token }),
+    queryKey: ["useSubstratePayloadMetadata", payload, network?.id, token?.id],
+    queryFn: () => getSubstratePayloadMetadata({ payload, network, token }),
     retry: false,
     refetchInterval: false,
     refetchOnWindowFocus: false,
@@ -40,60 +41,55 @@ export const useSubstratePayloadMetadataSuspense = (payload: SignerPayloadJSON |
 
 const getSubstratePayloadMetadata = async ({
   payload,
-  chain,
+  network,
   token,
 }: {
   payload: SignerPayloadJSON | null
-  chain: Chain | null | undefined
+  network: DotNetwork | null | undefined
   token: Token | null | undefined
 }) => {
-  if (!payload || !chain || !token) return null
+  if (!payload || !token || !isNetworkDot(network)) return null
 
   try {
     const specVersion = hexToNumber(payload.specVersion)
 
     // metadata v15 is required by the shortener
     const { registry, metadataRpc } = await getFrontendTypeRegistry(
-      chain,
+      network,
       payload.specVersion,
-      payload.blockHash,
       payload.signedExtensions,
     )
     assert(metadataRpc, "Unable to get metadata rpc")
 
-    // TODO try and avoid creating new metadata object
-    const metadata = registry.createType("Metadata", metadataRpc)
+    const metadata = unifyMetadata(decAnyMetadata(metadataRpc))
 
     // generate the sapi object if possible
     const sapi =
       metadata.version > 14
         ? getScaleApi(
             {
-              chainId: chain.id,
-              send: (...args) => api.subSend(chain.id, ...args),
+              chainId: network.id,
+              send: (...args) => api.subSend(network.id, ...args),
               submit: api.subSubmit,
             },
             metadataRpc,
             token,
-            chain.hasCheckMetadataHash,
-            chain.signedExtensions,
-            chain.registryTypes,
+            network.hasCheckMetadataHash,
+            network.signedExtensions,
+            network.registryTypes,
           )
         : null
 
     // check if runtime supports CheckMetadataHash
     const hasCheckMetadataHash =
-      chain.hasCheckMetadataHash && // this can be toggled off from chaindata
-      metadata.version >= 15 &&
-      metadata.asLatest.extrinsic.signedExtensions.some(
-        (ext) => ext.identifier.toString() === "CheckMetadataHash",
-      )
+      network.hasCheckMetadataHash && // this can be toggled off from chaindata
+      metadata.extrinsic.signedExtensions.some((ext) => ext.identifier === "CheckMetadataHash")
 
     // it is not possible to generate a valid metadata hash for dev chains as they are missing symbol and decimals in their chain spec
     // this should be check using a system_properties rpc call but checking token details achieves the same thing
     const isDevChain = token.symbol === "Unit" && token.decimals === 0
 
-    if (!hasCheckMetadataHash || isDevChain || !chain.specName)
+    if (!hasCheckMetadataHash || isDevChain || !network.specName)
       return {
         txMetadata: undefined,
         metadataHash: undefined,
@@ -107,7 +103,7 @@ const getSubstratePayloadMetadata = async ({
       tokenSymbol: token.symbol,
       decimals: token.decimals,
       base58Prefix: registry.chainSS58 ?? 42,
-      specName: chain.specName,
+      specName: network.specName,
       specVersion,
     })
     const metadataHash = u8aToHex(merkleizedMetadata.digest())

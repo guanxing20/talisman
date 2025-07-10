@@ -10,7 +10,7 @@ import { SignParamAccountButton, SignParamNetworkAddressButton } from "./shared"
 import { useEthSignKnownTransactionRequest } from "./shared/useEthSignKnownTransactionRequest"
 
 export const EthSignBodyErc721ApproveAll: FC = () => {
-  const { t } = useTranslation("request")
+  const { t } = useTranslation()
   const { account, network, decodedTx } = useEthSignKnownTransactionRequest()
 
   const { operator, approve } = useMemo(() => {
@@ -55,7 +55,10 @@ export const EthSignBodyErc721ApproveAll: FC = () => {
       </div>
       <div className="flex">
         <div>{t("NFTs from")}</div>
-        <SignParamAccountButton address={account.address} explorerUrl={network.explorerUrl} />
+        <SignParamAccountButton
+          address={account.address}
+          explorerUrl={network.blockExplorerUrls[0]}
+        />
       </div>
     </SignContainer>
   )

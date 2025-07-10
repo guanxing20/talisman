@@ -6,9 +6,11 @@ import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 import { Tooltip, TooltipContent, TooltipTrigger } from "talisman-ui"
 
+import { BITTENSOR_TOKEN_ID } from "@ui/domains/Staking/Bittensor/utils/constants"
 import { useNomPoolStakingStatus } from "@ui/domains/Staking/hooks/nomPools/useNomPoolStakingStatus"
 import { NomPoolWithdrawButton } from "@ui/domains/Staking/NomPoolWithdraw/NomPoolWithdrawButton"
 import { UnbondButton } from "@ui/domains/Staking/Unbond/UnbondButton"
+import { useDateFnsLocale } from "@ui/hooks/useDateFnsLocale"
 
 import { usePortfolioNavigation } from "../../usePortfolioNavigation"
 
@@ -22,6 +24,7 @@ type LockedExtraProps = {
 
 export const LockedExtra = ({ tokenId, address, rowMeta, isLoading, netuid }: LockedExtraProps) => {
   const { t } = useTranslation()
+  const locale = useDateFnsLocale()
   const { data } = useNomPoolStakingStatus(tokenId)
   const { selectedAccount } = usePortfolioNavigation()
 
@@ -38,13 +41,15 @@ export const LockedExtra = ({ tokenId, address, rowMeta, isLoading, netuid }: Lo
   const withdrawIn = useMemo(
     () =>
       !!rowMeta.unbonding && !!accountStatus?.canWithdrawIn
-        ? formatDuration(intervalToDuration({ start: 0, end: accountStatus.canWithdrawIn }))
+        ? formatDuration(intervalToDuration({ start: 0, end: accountStatus.canWithdrawIn }), {
+            locale,
+          })
         : null,
-    [accountStatus?.canWithdrawIn, rowMeta.unbonding],
+    [accountStatus?.canWithdrawIn, rowMeta.unbonding, locale],
   )
 
   const canUnbond = useMemo(
-    () => (accountStatus?.canUnstake && rowMeta.poolId) || tokenId === "bittensor-substrate-native",
+    () => (accountStatus?.canUnstake && rowMeta.poolId) || tokenId === BITTENSOR_TOKEN_ID,
     [accountStatus?.canUnstake, rowMeta.poolId, tokenId],
   )
 
@@ -80,7 +85,7 @@ export const LockedExtra = ({ tokenId, address, rowMeta, isLoading, netuid }: Lo
           address={rowAddress}
           variant="small"
           poolId={rowMeta.poolId ?? rowMeta.hotkey}
-          isBittensorUnbond={tokenId === "bittensor-substrate-native"}
+          isBittensorUnbond={tokenId === BITTENSOR_TOKEN_ID}
         />
       ) : null}
     </>

@@ -1,13 +1,16 @@
-import type { UnsignedTransaction } from "@substrate/txwrapper-core"
 import { KeyringPair } from "@polkadot/keyring/types"
-import { Metadata, TypeRegistry } from "@polkadot/types"
+import { TypeRegistry } from "@polkadot/types"
 import { EXTRINSIC_VERSION } from "@polkadot/types/extrinsic/v4/Extrinsic"
 import { Extrinsic } from "@polkadot/types/interfaces"
 import { assert } from "@polkadot/util"
 import { HexString } from "@polkadot/util/types"
-import { createEra } from "@substrate/txwrapper-core/lib/core/method"
-import { SubNativeToken } from "@talismn/balances"
-import { Chain, ChainId, TokenId } from "@talismn/chaindata-provider"
+import {
+  DotNetwork,
+  DotNetworkId,
+  NetworkId,
+  SubNativeToken,
+  TokenId,
+} from "@talismn/chaindata-provider"
 
 import { balanceModules } from "../../../rpcs/balance-modules"
 import { chainConnector } from "../../../rpcs/chain-connector"
@@ -41,7 +44,7 @@ export default class AssetTransfersRpc {
    * @returns A promise which resolves once the tx is submitted (but before it is included in a block or finalized!)
    */
   static async transfer(
-    chainId: ChainId,
+    chainId: DotNetworkId,
     tokenId: TokenId,
     amount: string,
     from: KeyringPair,
@@ -62,7 +65,7 @@ export default class AssetTransfersRpc {
 
     assert(signature, "transaction is not signed")
 
-    const token = await chaindataProvider.tokenById(tokenId)
+    const token = await chaindataProvider.getTokenById(tokenId)
 
     const hash = await watchSubstrateTransaction(chain, registry, unsigned, signature, {
       transferInfo: {
@@ -88,13 +91,12 @@ export default class AssetTransfersRpc {
     transferInfo: WalletTransactionTransferInfo,
   ) {
     const genesisHash = validateHexString(unsigned.genesisHash)
-    const chain = await chaindataProvider.chainByGenesisHash(genesisHash)
+    const chain = await chaindataProvider.getNetworkByGenesisHash(genesisHash)
     if (!chain) throw new Error(`Could not find chain for genesisHash ${genesisHash}`)
 
     const { registry } = await getTypeRegistry(
       unsigned.genesisHash,
       unsigned.specVersion,
-      unsigned.blockHash,
       unsigned.signedExtensions,
     )
 
@@ -126,7 +128,7 @@ export default class AssetTransfersRpc {
    * @returns An object containing the calculated `partialFee` as returned from the `payment_queryInfo` rpc endpoint.
    */
   static async checkFee(
-    chainId: ChainId,
+    chainId: DotNetworkId,
     tokenId: TokenId,
     amount: string,
     from: KeyringPair,
@@ -164,7 +166,7 @@ export default class AssetTransfersRpc {
    *          - `registry` a type registry containing metadata for the chain this transaction should be submitted to.
    */
   private static async prepareTransaction(
-    chainId: ChainId,
+    chainId: NetworkId,
     tokenId: TokenId,
     amount: string,
     from: KeyringPair,
@@ -176,32 +178,40 @@ export default class AssetTransfersRpc {
     tx: Extrinsic
     registry: TypeRegistry
     unsigned: SignerPayloadJSON
-    chain: Chain
+    chain: DotNetwork
     signature?: HexString
   }> {
-    const chain = await chaindataProvider.chainById(chainId)
+    const chain = await chaindataProvider.getNetworkById(chainId, "polkadot")
     assert(chain?.genesisHash, `Chain ${chainId} not found in store`)
     const { genesisHash } = chain
 
-    const token = await chaindataProvider.tokenById(tokenId)
+    const token = await chaindataProvider.getTokenById(tokenId)
     assert(token, `Token ${tokenId} not found in store`)
 
-    assert(chain.nativeToken, `Unknown native token for chain ${chainId}`)
-    const nativeToken = (await chaindataProvider.tokenById(chain.nativeToken.id)) as SubNativeToken
+    const nativeToken = (await chaindataProvider.getTokenById(
+      chain.nativeTokenId,
+    )) as SubNativeToken
 
-    const [blockHash, { block }, nonce, runtimeVersion] = await Promise.all([
-      chainConnector.send(chainId, "chain_getBlockHash", [], false),
-      chainConnector.send(chainId, "chain_getBlock", [], false),
-      chainConnector.send(chainId, "system_accountNextIndex", [from.address]),
-      getRuntimeVersion(chainId),
+    // on unstable networks with lots of forks (ex: westend asset hub as of june 2025),
+    // using a finalized block as reference for mortality is necessary for txs to get through
+    const blockHash = await chainConnector.send<`0x${string}`>(
+      chainId,
+      "chain_getFinalizedHead",
+      [],
+      false,
+    )
+
+    const [header, runtimeVersion, nonce] = await Promise.all([
+      chainConnector.send<{ number: `0x${string}` }>(chainId, "chain_getHeader", [blockHash]),
+      getRuntimeVersion(chainId, blockHash),
+      chainConnector.send<number>(chainId, "system_accountNextIndex", [from.address]),
     ])
 
+    const blockNumber = Number(header.number)
     const { specVersion, transactionVersion } = runtimeVersion
 
-    const { registry, metadataRpc } = await getTypeRegistry(chainId, specVersion, blockHash)
+    const { registry, metadataRpc } = await getTypeRegistry(chainId, specVersion)
     assert(metadataRpc, "Could not fetch metadata")
-
-    registry.setMetadata(new Metadata(registry, metadataRpc), undefined, chain.signedExtensions)
 
     const palletModule = balanceModules.find((m) => m.type === token.type)
     assert(palletModule, `Failed to construct tx for token of type '${token.type}'`)
@@ -209,7 +219,6 @@ export default class AssetTransfersRpc {
     if (
       !(
         "substrate-assets" === palletModule.type ||
-        "substrate-equilibrium" === palletModule.type ||
         "substrate-foreignassets" === palletModule.type ||
         "substrate-native" === palletModule.type ||
         "substrate-psp22" === palletModule.type ||
@@ -217,7 +226,7 @@ export default class AssetTransfersRpc {
       )
     )
       throw new Error(
-        `${token.symbol} transfers on ${token.chain?.id} are not implemented in this version of Talisman.`,
+        `${token.symbol} transfers on ${token.networkId} are not implemented in this version of Talisman.`,
       )
 
     const checkMetadataHash = getCheckMetadataHashPayloadProps(
@@ -241,7 +250,7 @@ export default class AssetTransfersRpc {
       userExtensions: chain.signedExtensions,
       registry,
       blockHash,
-      blockNumber: block.header.number,
+      blockNumber,
       nonce,
       specVersion,
       transactionVersion,
@@ -254,70 +263,47 @@ export default class AssetTransfersRpc {
       `Failed to handle tx type ${transaction.type} for token '${token.id}'`,
     )
 
-    const callData = transaction.callData
+    const era = registry.createType("ExtrinsicEra", { current: blockNumber, period: 64 })
 
-    // We used to use a library called txwrapper-core to build both the calldata and the SignerPayloadJSON out of the tx method and args.
-    // Now, we use PAPI to build the calldata, and then put together the SignerPayloadJSON ourselves.
-    //
-    // The structure here is based on the txwrapper-core internals:
-    // https://github.com/paritytech/txwrapper-core/blob/4a3b301f12427f100e8548eda29db90bae6bf23b/packages/txwrapper-core/src/core/method/defineMethod.ts#L162-L186
-    const unsignedTx: SignerPayloadJSON = {
+    const unsigned: SignerPayloadJSON = {
       address: from.address,
       assetId: undefined,
       blockHash,
-      blockNumber: registry.createType("BlockNumber", block.header.number).toHex(),
-      era: createEra(registry, {
-        kind: "mortal",
-        blockNumber: block.header.number,
-        period: 64,
-      }).toHex(),
+      blockNumber: registry.createType("BlockNumber", blockNumber).toHex(),
+      era: era.toHex(),
       genesisHash,
-      method: callData,
+      method: transaction.callData,
       nonce: registry.createType("Compact<Index>", nonce).toHex(),
       signedExtensions: registry.signedExtensions,
       specVersion: registry.createType("u32", specVersion).toHex(),
       tip: registry.createType("Compact<Balance>", tip ? Number(tip) : 0).toHex(),
       transactionVersion: registry.createType("u32", transactionVersion).toHex(),
       version: EXTRINSIC_VERSION,
+      withSignedTransaction: true,
+      ...checkMetadataHash,
     }
 
     // create the unsigned extrinsic
     const tx = registry.createType(
       "Extrinsic",
-      { method: unsignedTx.method },
-      { version: unsignedTx.version },
+      { method: unsigned.method },
+      { version: unsigned.version },
     )
 
-    const unsigned: UnsignedTransaction = {
-      metadataRpc,
-      ...unsignedTx,
-      ...checkMetadataHash,
-      withSignedTransaction: true,
-    }
+    // create signable extrinsic payload
+    const payload = registry.createType("ExtrinsicPayload", unsigned)
 
     if (sign) {
-      // create signable extrinsic payload
-      const extrinsicPayload = registry.createType("ExtrinsicPayload", unsigned, {
-        version: unsignedTx.version,
-      })
-
       // sign it using keyring (will fail if keyring is locked or if address is from hardware device)
-      const { signature } = extrinsicPayload.sign(from)
+      const { signature } = payload.sign(from)
 
       // apply signature
-      tx.addSignature(unsignedTx.address, signature, unsigned)
+      tx.addSignature(unsigned.address, signature, payload.toHex())
 
       return { tx, registry, unsigned, chain, signature }
     } else {
       // tx signed with fake signature for fee calculation
-      tx.signFake(unsignedTx.address, {
-        blockHash,
-        genesisHash,
-        nonce,
-        runtimeVersion,
-        ...checkMetadataHash,
-        withSignedTransaction: true,
-      })
+      tx.signFake(unsigned.address, { ...unsigned, era, runtimeVersion })
 
       return { tx, registry, unsigned, chain, signature: undefined }
     }

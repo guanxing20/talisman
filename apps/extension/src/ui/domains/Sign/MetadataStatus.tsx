@@ -13,7 +13,7 @@ type Props = {
 }
 
 export const MetadataStatus = ({ genesisHash, specVersion }: Props) => {
-  const { t } = useTranslation("request")
+  const { t } = useTranslation()
   const { isKnownChain, isMetadataUpdating, hasMetadataUpdateFailed, updateUrl, requiresUpdate } =
     useMetadataUpdates(genesisHash, specVersion)
 
@@ -58,7 +58,7 @@ export const MetadataStatus = ({ genesisHash, specVersion }: Props) => {
           <br />
           Please{" "}
           <a
-            href={`${window.location.origin}/dashboard.html#/settings/networks-tokens/networks/polkadot/add`}
+            href={`${window.location.origin}/dashboard.html#/settings/networks-tokens/networks/add`}
             target="_blank"
             rel="noreferrer noopener"
             className="text-grey-200 hover:text-white"

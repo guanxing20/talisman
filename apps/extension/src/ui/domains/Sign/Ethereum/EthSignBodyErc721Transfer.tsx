@@ -12,7 +12,7 @@ import { SignParamAccountButton, SignParamNetworkAddressButton } from "./shared"
 import { useEthSignKnownTransactionRequest } from "./shared/useEthSignKnownTransactionRequest"
 
 export const EthSignBodyErc721Transfer: FC = () => {
-  const { t } = useTranslation("request")
+  const { t } = useTranslation()
   const { account, network, decodedTx } = useEthSignKnownTransactionRequest()
 
   const asset = decodedTx.asset as { tokenURI?: string; name?: string } | undefined
@@ -66,7 +66,7 @@ export const EthSignBodyErc721Transfer: FC = () => {
       </div>
       <div className="flex">
         <div>{t("to")}</div>
-        <SignParamAccountButton address={to} explorerUrl={network.explorerUrl} withIcon />
+        <SignParamAccountButton address={to} explorerUrl={network.blockExplorerUrls[0]} withIcon />
       </div>
       {isOnBehalf && (
         <div className="flex max-w-full overflow-hidden">

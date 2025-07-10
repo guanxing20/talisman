@@ -17,13 +17,12 @@ export class SubHandler extends ExtensionHandler {
     signature,
     txInfo,
   }) => {
-    const chain = await chaindataProvider.chainByGenesisHash(payload.genesisHash)
+    const chain = await chaindataProvider.getNetworkByGenesisHash(payload.genesisHash)
     if (!chain) throw new Error(`Chain not found for genesis hash ${payload.genesisHash}`)
 
     const { registry } = await getTypeRegistry(
       payload.genesisHash,
       payload.specVersion,
-      payload.blockHash,
       payload.signedExtensions,
     )
 
@@ -85,9 +84,8 @@ export class SubHandler extends ExtensionHandler {
   private metadata: MessageHandler<"pri(substrate.metadata.get)"> = ({
     genesisHash,
     specVersion,
-    blockHash,
   }) => {
-    return getMetadataDef(genesisHash, specVersion, blockHash)
+    return getMetadataDef(genesisHash, specVersion)
   }
 
   public async handle<TMessageType extends MessageTypes>(

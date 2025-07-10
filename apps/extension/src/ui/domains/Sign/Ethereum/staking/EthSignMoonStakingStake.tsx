@@ -10,9 +10,9 @@ import { getContractCallArg } from "../getContractCallArg"
 import { useEthSignKnownTransactionRequest } from "../shared/useEthSignKnownTransactionRequest"
 
 export const EthSignMoonStakingStake: FC = () => {
-  const { t } = useTranslation("request")
+  const { t } = useTranslation()
   const { network, decodedTx } = useEthSignKnownTransactionRequest()
-  const token = useToken(network?.nativeToken?.id)
+  const token = useToken(network?.nativeTokenId)
 
   const [planck, autoCompound] = useMemo(
     () => [
@@ -22,7 +22,7 @@ export const EthSignMoonStakingStake: FC = () => {
     [decodedTx],
   )
 
-  if (!network?.nativeToken?.id || !planck || !token) return null
+  if (!network?.nativeTokenId || !planck || !token) return null
 
   return (
     <SignContainer
@@ -32,7 +32,7 @@ export const EthSignMoonStakingStake: FC = () => {
     >
       <SignViewStakingStake
         planck={planck}
-        tokenId={network.nativeToken.id}
+        tokenId={network.nativeTokenId}
         autoCompound={autoCompound}
       />
     </SignContainer>

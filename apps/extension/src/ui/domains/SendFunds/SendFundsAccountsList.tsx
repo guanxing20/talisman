@@ -11,13 +11,13 @@ export type SendFundsAccount = {
   address: string
   origin?: LegacyAccountOrigin
   name?: string
-  genesisHash?: string | null
+  genesisHash?: `0x${string}` | null
   balance?: Balance
 }
 
 type SendFundsAccountsListProps = {
   accounts: SendFundsAccount[]
-  genesisHash?: string | null
+  genesisHash?: `0x${string}` | null
   noFormat?: boolean
   selected?: string | null
   onSelect?: (address: string) => void
@@ -40,7 +40,7 @@ export const SendFundsAccountsList: FC<SendFundsAccountsListProps> = ({
   showBalances,
   tokenId,
 }) => {
-  const { t } = useTranslation("send-funds")
+  const { t } = useTranslation()
   const handleAccountClick = useCallback(
     (address: string) => () => {
       onSelect?.(address)

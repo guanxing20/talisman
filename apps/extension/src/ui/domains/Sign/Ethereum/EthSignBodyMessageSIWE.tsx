@@ -7,7 +7,7 @@ import { FC, useMemo } from "react"
 import { useTranslation } from "react-i18next"
 import { Button, Drawer, useOpenClose } from "talisman-ui"
 
-import { useEvmNetwork } from "@ui/state"
+import { useNetworkById } from "@ui/state"
 
 import { SignAlertMessage } from "../SignAlertMessage"
 import { ViewDetailsAddress } from "../ViewDetails/ViewDetailsAddress"
@@ -22,8 +22,8 @@ const ViewDetailsContent: FC<{
   siwe: ParsedMessage
   onClose: () => void
 }> = ({ account, request, siwe, onClose }) => {
-  const { t } = useTranslation("request")
-  const evmNetwork = useEvmNetwork(String(siwe.chainId))
+  const { t } = useTranslation()
+  const evmNetwork = useNetworkById(String(siwe.chainId), "ethereum")
 
   const message = useMemo(() => hexToString(request.request), [request.request])
 
@@ -39,7 +39,7 @@ const ViewDetailsContent: FC<{
         <ViewDetailsAddress
           label={t("From")}
           address={account.address}
-          blockExplorerUrl={evmNetwork?.explorerUrl}
+          blockExplorerUrl={evmNetwork?.blockExplorerUrls[0]}
         />
         <ViewDetailsField label={t("Domain")}>{siwe.domain}</ViewDetailsField>
         <ViewDetailsField label={t("Statement")}>{siwe.statement}</ViewDetailsField>
@@ -69,7 +69,7 @@ export const EthSignBodyMessageSIWE: FC<{
   request: EthSignRequest
   siwe: ParsedMessage
 }> = ({ account, request, siwe }) => {
-  const { t } = useTranslation("request")
+  const { t } = useTranslation()
   const { isOpen, open, close } = useOpenClose()
 
   const isValidUrl = useMemo(() => {

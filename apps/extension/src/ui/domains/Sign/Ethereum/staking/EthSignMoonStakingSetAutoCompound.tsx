@@ -8,12 +8,12 @@ import { getContractCallArg } from "../getContractCallArg"
 import { useEthSignKnownTransactionRequest } from "../shared/useEthSignKnownTransactionRequest"
 
 export const EthSignMoonStakingSetAutoCompound: FC = () => {
-  const { t } = useTranslation("request")
+  const { t } = useTranslation()
   const { network, decodedTx } = useEthSignKnownTransactionRequest()
 
   const autoCompound = useMemo(() => getContractCallArg<number>(decodedTx, "value"), [decodedTx])
 
-  if (!network?.nativeToken?.id || autoCompound === undefined) return null
+  if (!network?.nativeTokenId || autoCompound === undefined) return null
 
   return (
     <SignContainer
@@ -21,10 +21,7 @@ export const EthSignMoonStakingSetAutoCompound: FC = () => {
       title={t("Set auto-compounding")}
       header={<SignViewIconHeader icon="stake" />}
     >
-      <SignViewStakingSetAutoCompound
-        tokenId={network.nativeToken.id}
-        autoCompound={autoCompound}
-      />
+      <SignViewStakingSetAutoCompound tokenId={network.nativeTokenId} autoCompound={autoCompound} />
     </SignContainer>
   )
 }

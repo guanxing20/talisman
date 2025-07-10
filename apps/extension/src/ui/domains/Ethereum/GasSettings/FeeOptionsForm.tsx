@@ -15,7 +15,7 @@ import { Trans, useTranslation } from "react-i18next"
 import { Tooltip, TooltipContent, TooltipTrigger } from "talisman-ui"
 
 import { TokensAndFiat } from "@ui/domains/Asset/TokensAndFiat"
-import { useEvmNetwork, useToken } from "@ui/state"
+import { useNetworkById, useToken } from "@ui/state"
 
 import { NetworkUsage } from "../NetworkUsage"
 import { useFeePriorityOptionsUI } from "./common"
@@ -39,7 +39,7 @@ const Eip1559FeeTooltip: FC<{
   maxFee: bigint
   tokenId: TokenId
 }> = ({ estimatedFee, maxFee, tokenId }) => {
-  const { t } = useTranslation("request")
+  const { t } = useTranslation()
   const token = useToken(tokenId)
 
   // get estimated and max as string, with as many decimals on both for easy reading
@@ -170,8 +170,8 @@ export const FeeOptionsSelectForm: FC<FeeOptionsSelectProps> = ({
   networkUsage,
   tokenId,
 }) => {
-  const network = useEvmNetwork(txDetails.evmNetworkId)
-  const { t } = useTranslation("request")
+  const network = useNetworkById(txDetails.evmNetworkId, "ethereum")
+  const { t } = useTranslation()
   const handleSelect = useCallback(
     (priority: EthPriorityOptionName) => () => {
       if (onChange) onChange(priority)

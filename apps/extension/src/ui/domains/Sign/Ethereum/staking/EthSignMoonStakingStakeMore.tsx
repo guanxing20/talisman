@@ -8,12 +8,12 @@ import { getContractCallArg } from "../getContractCallArg"
 import { useEthSignKnownTransactionRequest } from "../shared/useEthSignKnownTransactionRequest"
 
 export const EthSignMoonStakingStakeMore: FC = () => {
-  const { t } = useTranslation("request")
+  const { t } = useTranslation()
   const { network, decodedTx } = useEthSignKnownTransactionRequest()
 
   const more = useMemo(() => getContractCallArg<bigint>(decodedTx, "more"), [decodedTx])
 
-  if (!network?.nativeToken?.id || !more) return null
+  if (!network?.nativeTokenId || !more) return null
 
   return (
     <SignContainer
@@ -21,7 +21,7 @@ export const EthSignMoonStakingStakeMore: FC = () => {
       title={t("Increase stake")}
       header={<SignViewIconHeader icon="stake" />}
     >
-      <SignViewStakingStakeMore planck={more} tokenId={network.nativeToken.id} />
+      <SignViewStakingStakeMore planck={more} tokenId={network.nativeTokenId} />
     </SignContainer>
   )
 }

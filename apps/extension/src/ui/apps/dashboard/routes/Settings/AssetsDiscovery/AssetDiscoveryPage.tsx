@@ -1,6 +1,6 @@
 import { bind } from "@react-rxjs/core"
 import { Address, BalanceFormatter } from "@talismn/balances"
-import { Chain, EvmNetworkId, SimpleEvmNetwork, Token, TokenId } from "@talismn/chaindata-provider"
+import { EthNetworkId, isTokenInTypes, Network, Token, TokenId } from "@talismn/chaindata-provider"
 import {
   ChevronDownIcon,
   DiamondIcon,
@@ -13,11 +13,11 @@ import {
 import { classNames, isNotNil, isTruthy } from "@talismn/util"
 import {
   Account,
-  activeEvmNetworksStore,
+  activeNetworksStore,
   activeTokensStore,
   DiscoveredBalance,
   getAccountGenesisHash,
-  isEvmNetworkActive,
+  isNetworkActive,
   isTokenActive,
 } from "extension-core"
 import { ChangeEventHandler, FC, ReactNode, useCallback, useMemo, useRef } from "react"
@@ -46,30 +46,27 @@ import { AnalyticsPage } from "@ui/api/analytics"
 import { DashboardLayout } from "@ui/apps/dashboard/layout"
 import { AccountIcon } from "@ui/domains/Account/AccountIcon"
 import { AccountsStack } from "@ui/domains/Account/AccountIconsStack"
-import { ChainLogo } from "@ui/domains/Asset/ChainLogo"
 import { Fiat } from "@ui/domains/Asset/Fiat"
 import { TokenLogo } from "@ui/domains/Asset/TokenLogo"
 import { Tokens } from "@ui/domains/Asset/Tokens"
 import { TokenTypePill } from "@ui/domains/Asset/TokenTypePill"
+import { NetworkLogo } from "@ui/domains/Networks/NetworkLogo"
 import { useAnalytics } from "@ui/hooks/useAnalytics"
 import { useAnalyticsPageView } from "@ui/hooks/useAnalyticsPageView"
 import {
   useAccounts,
-  useActiveEvmNetworksState,
+  useActiveNetworksState,
   useActiveTokensState,
   useAssetDiscoveryScan,
   useAssetDiscoveryScanProgress,
   useBalancesHydrate,
-  useChainsMap,
-  useEvmNetwork,
-  useEvmNetworks,
-  useEvmNetworksMap,
+  useNetworkById,
+  useNetworks,
+  useNetworksMapById,
   useToken,
   useTokens,
   useTokensMap,
 } from "@ui/state"
-import { isErc20Token } from "@ui/util/isErc20Token"
-import { isUniswapV2Token } from "@ui/util/isUniswapV2Token"
 
 import {
   useAssetDiscoveryFetchTokenRates,
@@ -96,7 +93,7 @@ const AccountsTooltip: FC<{ addresses: Address[] }> = ({ addresses }) => {
         .filter(isNotNil),
     [allAccounts, addresses],
   )
-  const { t } = useTranslation("admin")
+  const { t } = useTranslation()
   return (
     <div className="text-body-disabled flex flex-col gap-2 p-2 text-left text-xs">
       <div>{t("Accounts")}</div>
@@ -119,7 +116,7 @@ const AccountsTooltip: FC<{ addresses: Address[] }> = ({ addresses }) => {
   )
 }
 
-const NetworksTooltip: FC<{ networks: (Chain | SimpleEvmNetwork)[] }> = ({ networks }) => {
+const NetworksTooltip: FC<{ networks: Network[] }> = ({ networks }) => {
   const { t } = useTranslation()
 
   const tokens = useTokens()
@@ -128,10 +125,7 @@ const NetworksTooltip: FC<{ networks: (Chain | SimpleEvmNetwork)[] }> = ({ netwo
       networks
         .map(
           (n) =>
-            [
-              n,
-              tokens.filter((t) => t.evmNetwork?.id === n.id || t.chain?.id === n.id).length,
-            ] as const,
+            [n, tokens.filter((t) => t.networkId === n.id || t.networkId === n.id).length] as const,
         )
         .sort((a, b) => b[1] - a[1]),
     [networks, tokens],
@@ -146,7 +140,7 @@ const NetworksTooltip: FC<{ networks: (Chain | SimpleEvmNetwork)[] }> = ({ netwo
           key={network.id}
           className="flex w-[30rem] items-center gap-2 overflow-hidden whitespace-nowrap text-sm"
         >
-          <ChainLogo id={network.id} />
+          <NetworkLogo networkId={network.id} />
           <div className="text-body grow truncate">{network.name}</div>
           <div>{t("{{count}} tokens", { count: tokens })}</div>
         </div>
@@ -161,14 +155,14 @@ const NetworksTooltip: FC<{ networks: (Chain | SimpleEvmNetwork)[] }> = ({ netwo
 }
 
 const useBlockExplorerUrl = (token: Token | null) => {
-  const evmNetwork = useEvmNetwork(token?.evmNetwork?.id)
+  const network = useNetworkById(token?.networkId)
 
   return useMemo(() => {
-    if ((isErc20Token(token) || isUniswapV2Token(token)) && evmNetwork?.explorerUrl)
-      return urlJoin(evmNetwork.explorerUrl, "token", token.contractAddress)
+    if (isTokenInTypes(token, ["evm-erc20", "evm-uniswapv2"]) && network?.blockExplorerUrls[0])
+      return urlJoin(network.blockExplorerUrls[0], "token", token.contractAddress)
 
     return null
-  }, [token, evmNetwork?.explorerUrl])
+  }, [token, network?.blockExplorerUrls])
 }
 
 const useCoingeckoUrl = (token: Token | null) => {
@@ -183,12 +177,12 @@ const AssetRowContent: FC<{ tokenId: TokenId; assets: DiscoveredBalance[] }> = (
   tokenId,
   assets,
 }) => {
-  const { t } = useTranslation("admin")
+  const { t } = useTranslation()
   const { genericEvent } = useAnalytics()
   const token = useToken(tokenId)
-  const evmNetwork = useEvmNetwork(token?.evmNetwork?.id)
+  const evmNetwork = useNetworkById(token?.networkId)
   const tokenRates = useAssetDiscoveryTokenRates(token?.id)
-  const activeEvmNetworks = useActiveEvmNetworksState()
+  const activeEvmNetworks = useActiveNetworksState()
   const activeTokens = useActiveTokensState()
 
   const balance = useMemo(() => {
@@ -210,7 +204,7 @@ const AssetRowContent: FC<{ tokenId: TokenId; assets: DiscoveredBalance[] }> = (
     () =>
       !!evmNetwork &&
       !!token &&
-      isEvmNetworkActive(evmNetwork, activeEvmNetworks) &&
+      isNetworkActive(evmNetwork, activeEvmNetworks) &&
       isTokenActive(token, activeTokens),
     [activeEvmNetworks, activeTokens, evmNetwork, token],
   )
@@ -220,9 +214,9 @@ const AssetRowContent: FC<{ tokenId: TokenId; assets: DiscoveredBalance[] }> = (
       const checked = e.target.checked
       if (!token || !evmNetwork) return
 
-      if (checked) activeEvmNetworksStore.setActive(evmNetwork.id, true)
+      if (checked) activeNetworksStore.setActive(evmNetwork.id, true)
       // when unchecking, dont disable the network except for native tokens
-      else if (token.type === "evm-native") activeEvmNetworksStore.setActive(evmNetwork.id, false)
+      else if (token.type === "evm-native") activeNetworksStore.setActive(evmNetwork.id, false)
       // if token is not native, allow it to be toggled. Native tokens are taken care of by the network toggle
       if (token.type !== "evm-native") activeTokensStore.setActive(token.id, checked)
     },
@@ -230,7 +224,7 @@ const AssetRowContent: FC<{ tokenId: TokenId; assets: DiscoveredBalance[] }> = (
   )
 
   const isInactiveNetwork = useMemo(
-    () => evmNetwork && !isEvmNetworkActive(evmNetwork, activeEvmNetworks),
+    () => evmNetwork && !isNetworkActive(evmNetwork, activeEvmNetworks),
     [activeEvmNetworks, evmNetwork],
   )
 
@@ -302,13 +296,13 @@ const AssetRowContent: FC<{ tokenId: TokenId; assets: DiscoveredBalance[] }> = (
       </div>
       <div className="flex justify-end gap-8 pl-4 text-right">
         <Toggle checked={isActive} onChange={handleToggleChange} />
-        {isErc20Token(token) || isUniswapV2Token(token) || coingeckoUrl ? (
+        {isTokenInTypes(token, ["evm-erc20", "evm-uniswapv2"]) || coingeckoUrl ? (
           <ContextMenu placement="bottom-end">
             <ContextMenuTrigger className="hover:text-body bg-grey-800 text-body-secondary hover:bg-grey-700 shrink-0 rounded-sm p-4">
               <MoreHorizontalIcon />
             </ContextMenuTrigger>
             <ContextMenuContent>
-              {(isErc20Token(token) || isUniswapV2Token(token)) && (
+              {isTokenInTypes(token, ["evm-erc20", "evm-uniswapv2"]) && (
                 <ContextMenuItem
                   onClick={() => navigate(`/settings/networks-tokens/tokens/${token.id}`)}
                 >
@@ -351,7 +345,7 @@ const AssetRow: FC<{ tokenId: TokenId; assets: DiscoveredBalance[] }> = ({ token
 }
 
 const AssetTable: FC = () => {
-  const { t } = useTranslation("admin")
+  const { t } = useTranslation()
   const isInitializing = useIsInitializingScan()
   const { balances, balancesByTokenId, tokenIds } = useAssetDiscoveryScanProgress()
   // this hook is in charge of fetching the token rates for the tokens that were discovered
@@ -376,18 +370,21 @@ const AssetTable: FC = () => {
 }
 
 const Header: FC = () => {
-  const { t } = useTranslation("admin")
+  const { t } = useTranslation()
   const isInitializing = useIsInitializingScan()
   const { balances, accountsCount, networksCount, tokensCount, percent, isInProgress } =
     useAssetDiscoveryScanProgress()
 
-  const allNetworks = useEvmNetworks({ activeOnly: false, includeTestnets: true })
+  const allNetworks = useNetworks({
+    platform: "ethereum",
+    activeOnly: false,
+    includeTestnets: true,
+  })
 
-  const activeNetworks = useActiveEvmNetworksState()
+  const activeNetworks = useActiveNetworksState()
   const recommendedNetworks = useMemo(() => {
     return allNetworks.filter(
-      (n) =>
-        isEvmNetworkActive(n, activeNetworks) || (n.forceScan && activeNetworks[n.id] !== false),
+      (n) => isNetworkActive(n, activeNetworks) || (n.forceScan && activeNetworks[n.id] !== false),
     )
   }, [activeNetworks, allNetworks])
 
@@ -522,7 +519,7 @@ const AccountsWrapper: FC<{
 
 const NetworksWrapper: FC<{
   children?: ReactNode
-  networks: (Chain | SimpleEvmNetwork)[]
+  networks: Network[]
   className?: string
 }> = ({ children, networks, className }) => {
   return (
@@ -536,37 +533,36 @@ const NetworksWrapper: FC<{
 }
 
 const ScanInfo: FC = () => {
-  const { t } = useTranslation("admin")
+  const { t } = useTranslation()
   const isInitializing = useIsInitializingScan()
 
   const { balancesByTokenId, balances, isInProgress } = useAssetDiscoveryScanProgress()
   const { lastScanAccounts, lastScanNetworks, lastScanTimestamp } = useAssetDiscoveryScan()
 
-  const activeEvmNetworks = useActiveEvmNetworksState()
+  const activeEvmNetworks = useActiveNetworksState()
   const activeTokens = useActiveTokensState()
   const tokensMap = useTokensMap()
-  const evmNetworksMap = useEvmNetworksMap()
-  const chainsMap = useChainsMap()
+  const networksMap = useNetworksMapById()
 
   const canEnable = useMemo(() => {
     const tokenIds = Object.keys(balancesByTokenId)
     return tokenIds.some((tokenId) => {
       const token = tokensMap[tokenId]
-      const evmNetwork = evmNetworksMap[token?.evmNetwork?.id ?? ""]
+      const evmNetwork = networksMap[token?.networkId ?? ""]
       return (
         token &&
         evmNetwork &&
-        (!isEvmNetworkActive(evmNetwork, activeEvmNetworks) || !isTokenActive(token, activeTokens))
+        (!isNetworkActive(evmNetwork, activeEvmNetworks) || !isTokenActive(token, activeTokens))
       )
     })
-  }, [balancesByTokenId, activeEvmNetworks, activeTokens, evmNetworksMap, tokensMap])
+  }, [balancesByTokenId, activeEvmNetworks, activeTokens, networksMap, tokensMap])
 
   const enableAll = useCallback(async () => {
     const tokenIds = Object.keys(balancesByTokenId)
     const evmNetworkIds = [
-      ...new Set(tokenIds.map((tokenId) => tokensMap[tokenId]?.evmNetwork?.id).filter(isTruthy)),
-    ] as EvmNetworkId[]
-    await activeEvmNetworksStore.set(Object.fromEntries(evmNetworkIds.map((id) => [id, true])))
+      ...new Set(tokenIds.map((tokenId) => tokensMap[tokenId]?.networkId).filter(isTruthy)),
+    ] as EthNetworkId[]
+    await activeNetworksStore.set(Object.fromEntries(evmNetworkIds.map((id) => [id, true])))
     await activeTokensStore.set(
       Object.fromEntries(
         tokenIds.filter((id) => !id.includes("evm-native")).map((id) => [id, true]),
@@ -576,7 +572,7 @@ const ScanInfo: FC = () => {
 
   const formatedTimestamp = useMemo(() => {
     const date = new Date(lastScanTimestamp)
-    return `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`
+    return `${date.toLocaleDateString(window.navigator.language)} ${date.toLocaleTimeString(window.navigator.language)}`
   }, [lastScanTimestamp])
 
   const accounts = useAccounts()
@@ -584,9 +580,9 @@ const ScanInfo: FC = () => {
     () => accounts.filter((a) => lastScanAccounts.includes(a.address)),
     [accounts, lastScanAccounts],
   )
-  const lastNetworks = useMemo<(Chain | SimpleEvmNetwork)[]>(
-    () => lastScanNetworks.map((id) => evmNetworksMap[id] ?? chainsMap[id]).filter(isNotNil),
-    [chainsMap, evmNetworksMap, lastScanNetworks],
+  const lastNetworks = useMemo<Network[]>(
+    () => lastScanNetworks.map((id) => networksMap[id]).filter(isNotNil),
+    [lastScanNetworks, networksMap],
   )
 
   if (isInitializing) return null
@@ -638,7 +634,7 @@ const ScanInfo: FC = () => {
 }
 
 const Notice: FC = () => {
-  const { t } = useTranslation("admin")
+  const { t } = useTranslation()
   return (
     <div className="bg-grey-800 text-body-secondary flex items-center gap-8 rounded p-8 py-6">
       <div>
@@ -673,7 +669,7 @@ const Notice: FC = () => {
 }
 
 const Content = () => {
-  const { t } = useTranslation("admin")
+  const { t } = useTranslation()
   useBalancesHydrate() // preload
 
   useAnalyticsPageView(ANALYTICS_PAGE)

@@ -1,8 +1,7 @@
 import * as Sentry from "@sentry/browser"
+import { EthBaseFeeTrend } from "extension-core"
 import { log } from "extension-shared"
 import { formatGwei, parseGwei, PublicClient } from "viem"
-
-import { EthBaseFeeTrend } from "../../../../../../../packages/extension-core/src/domains/signing/types"
 
 const BLOCKS_HISTORY_LENGTH = 5
 const REWARD_PERCENTILES = [10, 20, 30]
@@ -58,9 +57,10 @@ export const getFeeHistoryAnalysis = async (
       )
 
     // last entry of the array is the base fee for next block, exclude it from further averages
+    // warning: on neuroweb nextBaseFee is lower than the others even when network is idle
     const nextBaseFee = feeHistory.baseFeePerGas.pop() as bigint
 
-    const isBaseFeeIdle = feeHistory.baseFeePerGas.every((fee) => fee === nextBaseFee)
+    const isBaseFeeIdle = feeHistory.baseFeePerGas.every((fee, i, arr) => fee === arr[0])
 
     const avgBaseFeePerGas =
       feeHistory.baseFeePerGas.reduce((prev, curr) => prev + curr, 0n) /

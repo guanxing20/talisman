@@ -1,5 +1,5 @@
 import { Address } from "@talismn/balances"
-import { EvmNetworkId, TokenId } from "@talismn/chaindata-provider"
+import { EthNetworkId, TokenId } from "@talismn/chaindata-provider"
 import { TransactionRequest } from "viem"
 
 import { SignerPayloadJSON } from "../signing/types"
@@ -37,15 +37,24 @@ export type WalletTransactionInfo =
   //     value: string
   //     to: Address
   //   } |
-  {
-    type: "swap-simpleswap"
-    exchangeId: string
-    fromTokenId: TokenId
-    toTokenId: TokenId
-    fromAmount: string
-    toAmount: string
-    to: Address
-  }
+  | {
+      type: "swap-simpleswap"
+      exchangeId: string
+      fromTokenId: TokenId
+      toTokenId: TokenId
+      fromAmount: string
+      toAmount: string
+      to: Address
+    }
+  | {
+      type: "swap-stealthex"
+      exchangeId: string
+      fromTokenId: TokenId
+      toTokenId: TokenId
+      fromAmount: string
+      toAmount: string
+      to: Address
+    }
 
 export type WalletTransactionBase = WalletTransactionTransferInfo & {
   account: Address
@@ -63,13 +72,13 @@ export type WalletTransactionBase = WalletTransactionTransferInfo & {
 
 export type EvmWalletTransaction = WalletTransactionBase & {
   networkType: "evm"
-  evmNetworkId: EvmNetworkId
+  evmNetworkId: EthNetworkId
   unsigned: TransactionRequest<string>
 }
 
 export type SubWalletTransaction = WalletTransactionBase & {
   networkType: "substrate"
-  genesisHash: string
+  genesisHash: `0x${string}`
   unsigned: SignerPayloadJSON
 }
 

@@ -1,7 +1,6 @@
 {
   "$schema": "https://turborepo.org/schema.json",
   "globalEnv": [
-    "API_KEY_ONFINALITY",
     "BLOWFISH_API_KEY",
     "BLOWFISH_BASE_PATH",
     "BLOWFISH_QA_API_KEY",
@@ -9,6 +8,7 @@
     "COINGECKO_API_KEY_VALUE",
     "COINGECKO_API_URL",
     "EVM_LOGPROXY",
+    "DEV_WITH_LANGUAGES",
     "MEASURE_WEBPACK_SPEED",
     "NFTS_API_BASE_PATH",
     "NFTS_API_KEY",

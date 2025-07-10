@@ -12,7 +12,7 @@ const ForkTsCheckerWebpackPlugin = require("fork-ts-checker-webpack-plugin")
 const ForkTsCheckerNotifierWebpackPlugin = require("fork-ts-checker-notifier-webpack-plugin")
 const EslintWebpackPlugin = require("eslint-webpack-plugin")
 
-const { browser, srcDir, distDir, getRelease, getGitShortHash, dropConsole } = require("./utils")
+const { browser, srcDir, distDir, getRelease, getGitShortHash } = require("./utils")
 
 /** @type { import('webpack').Configuration } */
 const config = (env) => ({
@@ -150,9 +150,6 @@ const config = (env) => ({
       "process.env.PORT_PREFIX": JSON.stringify(process.env.PORT_PREFIX || "talisman"),
       "process.env.NODE_DEBUG": JSON.stringify(process.env.NODE_DEBUG || ""),
       "process.env.POSTHOG_AUTH_TOKEN": JSON.stringify(process.env.POSTHOG_AUTH_TOKEN || ""),
-      "process.env.API_KEY_ONFINALITY": JSON.stringify(
-        env.build === "production" ? process.env.API_KEY_ONFINALITY || "" : "",
-      ),
       "process.env.SENTRY_AUTH_TOKEN": JSON.stringify(process.env.SENTRY_AUTH_TOKEN || ""),
       "process.env.SENTRY_DSN": JSON.stringify(process.env.SENTRY_DSN || ""),
       "process.env.SIMPLE_LOCALIZE_API_KEY": JSON.stringify(
@@ -204,7 +201,15 @@ const config = (env) => ({
         env.build === undefined ? process.env.NFTS_API_BASE_PATH || "" : "",
       ),
       // computed values
-      "process.env.DEBUG": JSON.stringify(String(!dropConsole(env))),
+      "process.env.DEBUG": JSON.stringify(
+        String(
+          // DEBUG is true when:
+          // 1. env.build is neither production nor canary, or
+          !["production", "canary"].includes(env.build) ||
+            // 2. when NODE_ENV is TEST
+            process.env.NODE_ENV === "TEST",
+        ),
+      ),
       "process.env.BUILD": JSON.stringify(env.build),
       "process.env.COMMIT_SHA_SHORT": JSON.stringify(getGitShortHash()),
       "process.env.RELEASE": JSON.stringify(getRelease(env)),

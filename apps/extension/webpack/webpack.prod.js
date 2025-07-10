@@ -16,7 +16,6 @@ const {
   getArchiveFileName,
   manifestDir,
   getSentryPlugin,
-  dropConsole,
 } = require("./utils")
 const { SourceMapDevToolPlugin } = require("webpack")
 const SimpleLocalizeDownloadPlugin = require("./plugins/SimpleLocalizeDownloadPlugin")
@@ -89,10 +88,7 @@ const config = (env) => {
       }),
       new SimpleLocalizeDownloadPlugin(),
       // Do not include source maps in the zip file
-      new ZipPlugin({
-        folder: distDir,
-        filename: getArchiveFileName(env),
-      }),
+      new ZipPlugin({ folder: distDir, filename: getArchiveFileName(env) }),
       new BundleAnalyzerPlugin({
         // analyzerMode defaults to server, spawning a http server which can hang the process
         // static will instead output a static html file to the dist folder, and not hang the terminal
@@ -106,8 +102,6 @@ const config = (env) => {
           terserOptions: {
             compress: {
               defaults: true,
-              // Drop any calls to console.error/warn/log/debug from production/canary builds, and when running tests
-              drop_console: dropConsole(env) ? ["error", "warn", "log", "debug"] : false,
             },
           },
         }),

@@ -3,53 +3,33 @@
 import type { SubmittableExtrinsic } from "@polkadot/api/types"
 import type { Atom, Getter, SetStateAction, Setter } from "jotai"
 import type { TransactionRequest } from "viem"
-import type { Chain as ViemChain } from "viem/chains"
-import { evmErc20TokenId, evmNativeTokenId, subNativeTokenId } from "@talismn/balances"
-import { isEthereumAddress, isSs58Address } from "@talismn/crypto"
-import { isBitcoinAddress } from "@talismn/crypto/src/address/encoding/bitcoin"
+import {
+  evmErc20TokenId,
+  evmNativeTokenId,
+  Network,
+  subNativeTokenId,
+} from "@talismn/chaindata-provider"
+import { isBitcoinAddress, isEthereumAddress, isSs58Address } from "@talismn/crypto"
+import { ScaleApi } from "@talismn/sapi"
+import BigNumber from "bignumber.js"
 import {
   Account,
-  isAccountCompatibleWithChain,
+  isAccountCompatibleWithNetwork,
   isAccountPlatformEthereum,
+  isAddressCompatibleWithNetwork,
   remoteConfigStore,
+  SignerPayloadJSON,
 } from "extension-core"
 import { atom } from "jotai"
 import { atomWithStorage, createJSONStorage, unstable_withStorageValidator } from "jotai/utils"
 import { Loadable } from "jotai/vanilla/utils/loadable"
-import {
-  arbitrum,
-  base,
-  blast,
-  bsc,
-  mainnet,
-  manta,
-  moonbeam,
-  moonriver,
-  optimism,
-  polygon,
-  sonic,
-} from "viem/chains"
-
-import { AnyChain } from "@ui/state"
 
 import { Decimal } from "../swaps-port/Decimal"
 import { swapViewAtom } from "../swaps-port/swapViewAtom"
+import { SimpleswapExchange } from "./simpleswap-swap-module"
+import { StealthexExchange } from "./stealthex-swap-module"
 
-export const supportedEvmChains: Record<string, ViemChain> = {
-  eth: mainnet,
-  bsc,
-  base,
-  arbitrum,
-  optimism,
-  blast,
-  polygon,
-  manta,
-  movr: moonriver,
-  glmr: moonbeam,
-  s: sonic,
-}
-
-export type SupportedSwapProtocol = "simpleswap"
+export type SupportedSwapProtocol = "simpleswap" | "stealthex"
 
 export type SwappableAssetBaseType<TContext = Partial<Record<SupportedSwapProtocol, any>>> = {
   id: string
@@ -69,9 +49,9 @@ export type SwappableAssetWithDecimals<TContext = Partial<Record<SupportedSwapPr
   decimals: number
 } & SwappableAssetBaseType<TContext>
 
-type QuoteFee = {
+export type QuoteFee = {
   name: string
-  amount: Decimal
+  amount: BigNumber
   tokenId: string
 }
 
@@ -83,11 +63,29 @@ export type BaseQuote<TData = any> = {
   inputAmountBN: bigint
   error?: string
   fees: QuoteFee[]
-  talismanFeeBps?: number
+  talismanFee?: number
   data?: TData
   timeInSec: number
   providerLogo: string
   providerName: string
+}
+
+export type QuoteResponse = {
+  query: {
+    amount: string
+    quote: {
+      intermediateAmount?: string
+      egressAmount: string
+      includedFees: Array<{
+        type: "LIQUIDITY" | "NETWORK" | "INGRESS" | "EGRESS" | "BROKER" | "BOOST"
+        chain: unknown
+        asset: unknown
+        amount: string
+      }>
+      lowLiquidityWarning: boolean | undefined
+      estimatedDurationSeconds: number
+    }
+  }
 }
 
 type SwapProps = {
@@ -134,8 +132,13 @@ export type SwapModule = {
   fromAssetsSelector: Atom<Promise<SwappableAssetBaseType[]>>
   toAssetsSelector: Atom<Promise<SwappableAssetBaseType[]>>
   quote: QuoteFunction
-  // /** Returns whether the swap succeeded or not */
-  // swap: SwapFunction<any>
+
+  exchangeAtom: Atom<Promise<SimpleswapExchange | StealthexExchange | undefined>>
+  evmTransactionAtom: Atom<Promise<TransactionRequest | undefined>>
+  substratePayloadAtom: (
+    sapi?: ScaleApi | null,
+    allowReap?: boolean,
+  ) => Atom<Promise<{ payload: SignerPayloadJSON; txMetadata?: Uint8Array } | null>>
 
   // talisman curated data
   decentralisationScore: number
@@ -149,20 +152,24 @@ export type SwapModule = {
   } | null>
 }
 
-// atoms shared between swap modules
-
+// atoms shared between swap module
 export const validateAddress = (
   account: Account | undefined,
   address: string,
-  chain: AnyChain | undefined,
+  network: Network | undefined,
   networkType: "evm" | "substrate" | "btc",
 ) => {
+  if (network) {
+    if (account) return isAccountCompatibleWithNetwork(network, account)
+    if (address) return isAddressCompatibleWithNetwork(network, address)
+  }
+
   switch (networkType) {
     case "evm":
       return account ? isAccountPlatformEthereum(account) : isEthereumAddress(address)
     case "substrate":
       return account
-        ? chain && isAccountCompatibleWithChain(chain, account)
+        ? network && isAccountCompatibleWithNetwork(network, account)
         : isSs58Address(address)
     case "btc":
       return isBitcoinAddress(address)
@@ -274,7 +281,7 @@ export const getTokenIdForSwappableAsset = (
   switch (chainType) {
     case "evm":
       return contractAddress
-        ? evmErc20TokenId(chainId.toString(), contractAddress)
+        ? evmErc20TokenId(chainId.toString(), contractAddress as `0x${string}`)
         : evmNativeTokenId(chainId.toString())
     case "substrate":
       return subNativeTokenId(chainId.toString())

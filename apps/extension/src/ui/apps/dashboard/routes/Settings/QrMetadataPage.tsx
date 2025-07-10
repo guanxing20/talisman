@@ -1,4 +1,4 @@
-import { Chain } from "@talismn/chaindata-provider"
+import { DotNetwork } from "@talismn/chaindata-provider"
 import { LoaderIcon, SecretIcon } from "@talismn/icons"
 import { log, POLKADOT_VAULT_DOCS_URL } from "extension-shared"
 import { FC, useCallback, useEffect, useMemo, useState } from "react"
@@ -17,13 +17,13 @@ import {
   useMnemonicCreateModal,
 } from "@ui/apps/dashboard/routes/Settings/Mnemonics/MnemonicCreateModal"
 import { AccountAddMnemonicDropdown } from "@ui/domains/Account/AccountAdd/AccountAddDerived/AccountAddMnemonicDropdown"
-import { ChainLogo } from "@ui/domains/Asset/ChainLogo"
+import { NetworkLogo } from "@ui/domains/Networks/NetworkLogo"
 import { MetadataQrCode } from "@ui/domains/Sign/Qr/MetadataQrCode"
 import { NetworkSpecsQrCode } from "@ui/domains/Sign/Qr/NetworkSpecsQrCode"
-import { useAppState, useBalancesHydrate, useChains, useMnemonic } from "@ui/state"
+import { useAppState, useBalancesHydrate, useMnemonic, useNetworks } from "@ui/state"
 
 const SetVerifierCertificateContentInner = () => {
-  const { t } = useTranslation("admin")
+  const { t } = useTranslation()
   const navigate = useNavigate()
 
   const [mnemonicId, setMnemonicId] = useState<string | null>(null)
@@ -101,10 +101,10 @@ const SetVerifierCertificateContent = () => (
   </MnemonicCreateModalProvider>
 )
 
-const renderOption = (chain: Chain) => {
+const renderOption = (chain: DotNetwork) => {
   return (
     <div className="flex max-w-full items-center gap-5 overflow-hidden">
-      <ChainLogo id={chain.id} className="text-[1.25em]" />
+      <NetworkLogo networkId={chain.id} className="text-[1.25em]" />
       <span className="overflow-hidden text-ellipsis whitespace-nowrap">{chain.name}</span>
     </div>
   )
@@ -132,9 +132,9 @@ const MnemonicButton: FC<{ label: string }> = ({ label }) => {
 }
 
 const MetadataPortalContent = () => {
-  const { t } = useTranslation("admin")
-  const chains = useChains({ activeOnly: false, includeTestnets: true })
-  const [chain, setChain] = useState<Chain | null>(null)
+  const { t } = useTranslation()
+  const chains = useNetworks({ platform: "polkadot", activeOnly: false, includeTestnets: true })
+  const [chain, setChain] = useState<DotNetwork | null>(null)
   const [tab, setTab] = useState<"specs" | "metadata">("specs")
 
   const [certifierMnemonicId] = useAppState("vaultVerifierCertificateMnemonicId")
@@ -231,7 +231,7 @@ const MetadataPortalContent = () => {
 }
 
 const Content = () => {
-  const { t } = useTranslation("admin")
+  const { t } = useTranslation()
   useBalancesHydrate() // preload
 
   const [certifierMnemonicId] = useAppState("vaultVerifierCertificateMnemonicId")

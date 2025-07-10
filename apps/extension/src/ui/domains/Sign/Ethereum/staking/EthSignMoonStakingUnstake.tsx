@@ -9,11 +9,11 @@ import { SignViewStakingUnstake } from "../../Views/staking/SignViewStakingUnsta
 import { useEthSignKnownTransactionRequest } from "../shared/useEthSignKnownTransactionRequest"
 
 export const EthSignMoonStakingUnstake: FC = () => {
-  const { t } = useTranslation("request")
+  const { t } = useTranslation()
   const { network } = useEthSignKnownTransactionRequest()
-  const token = useToken(network?.nativeToken?.id)
+  const token = useToken(network?.nativeTokenId)
 
-  if (!network?.nativeToken?.id || !token) return null
+  if (!network?.nativeTokenId || !token) return null
 
   return (
     <SignContainer
@@ -21,7 +21,7 @@ export const EthSignMoonStakingUnstake: FC = () => {
       title={t("Unbond {{symbol}}", { symbol: token.symbol })}
       header={<SignViewIconHeader icon="unstake" />}
     >
-      <SignViewStakingUnstake tokenId={network.nativeToken.id} />
+      <SignViewStakingUnstake tokenId={network.nativeTokenId} />
     </SignContainer>
   )
 }

@@ -9,18 +9,18 @@ import { api } from "@ui/api"
 import { useSendFundsWizard } from "@ui/apps/popup/pages/SendFunds/context"
 import { QrSubstrate } from "@ui/domains/Sign/Qr/QrSubstrate"
 import { useIsKnownAddress } from "@ui/hooks/useIsKnownAddress"
-import { useAccountByAddress, useChain, useToken } from "@ui/state"
+import { useAccountByAddress, useNetworkById, useToken } from "@ui/state"
 
 import { useSendFunds } from "./useSendFunds"
 
 const SendFundsQrSubstrate = () => {
-  const { t } = useTranslation("send-funds")
+  const { t } = useTranslation()
   const { tokenId, from, to, amount } = useSendFundsWizard()
   const { subTransaction, sendWithSignature, isLocked, setIsLocked } = useSendFunds()
   const [error, setError] = useState<Error>()
 
   const token = useToken(tokenId)
-  const chain = useChain(token?.chain?.id)
+  const chain = useNetworkById(token?.networkId, "polkadot")
   const account = useAccountByAddress(from) ?? undefined
   const knownAddress = useIsKnownAddress(to)
 
@@ -46,7 +46,7 @@ const SendFundsQrSubstrate = () => {
               ? privacyRoundCurrency(Number(planckToTokens(amount, token.decimals)))
               : "unknown",
             tokenId,
-            chainId: token?.chain?.id || "unknown",
+            chainId: token?.networkId || "unknown",
             internal: !!knownAddress,
             recipientType: knownAddress ? recipientTypeMap[knownAddress.type] : "external",
             qr: true,

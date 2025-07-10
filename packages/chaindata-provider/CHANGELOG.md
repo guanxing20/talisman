@@ -1,5 +1,33 @@
 # @talismn/chaindata-provider
 
+## 0.11.1
+
+### Patch Changes
+
+- f39d58e: generate init data
+- f9cfd27: generate init data
+- 21bec07: chore: added blockExplorerUrls to Chain.ts
+
+## 0.11.0
+
+### Minor Changes
+
+- ecd5c7a: feat: chaindata v3
+
+## 0.10.9
+
+## 0.10.8
+
+### Patch Changes
+
+- cb55639: generate init data
+
+## 0.10.7
+
+### Patch Changes
+
+- 719c548: generate init data
+
 ## 0.10.6
 
 ### Patch Changes

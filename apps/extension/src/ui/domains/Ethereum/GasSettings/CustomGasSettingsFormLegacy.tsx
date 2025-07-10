@@ -1,10 +1,10 @@
 import { yupResolver } from "@hookform/resolvers/yup"
+import { EthNetworkId } from "@talismn/chaindata-provider"
 import { ArrowRightIcon, InfoIcon, LoaderIcon } from "@talismn/icons"
 import { formatDecimals } from "@talismn/util"
 import {
   EthGasSettingsLegacy,
   EthTransactionDetails,
-  EvmNetworkId,
   GasSettingsByPriorityLegacy,
   getHumanReadableErrorMessage,
 } from "extension-core"
@@ -70,7 +70,7 @@ const schema = yup
   .required()
 
 const useIsValidGasSettings = (
-  evmNetworkId: EvmNetworkId,
+  evmNetworkId: EthNetworkId,
   tx: TransactionRequest,
   gasPriceGwei: string,
   gasLimit: number,
@@ -143,7 +143,7 @@ export const CustomGasSettingsFormLegacy: FC<CustomGasSettingsFormLegacyProps> =
   txDetails,
   onConfirm,
 }) => {
-  const { t } = useTranslation("request")
+  const { t } = useTranslation()
   const { genericEvent } = useAnalytics()
 
   useEffect(() => {

@@ -1,21 +1,24 @@
+import { DotNetworkId } from "@talismn/chaindata-provider"
 import { formatDistance } from "date-fns"
-import { ChainId } from "extension-core"
 import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
+
+import { useDateFnsLocale } from "@ui/hooks/useDateFnsLocale"
 
 import { useStakingBondingDuration } from "../hooks/nomPools/useStakingBondingDuration"
 
 type NomPoolUnbondingPeriodProps = {
-  chainId: ChainId | null | undefined
+  chainId: DotNetworkId | null | undefined
 }
 
 export const NomPoolUnbondingPeriod = ({ chainId }: NomPoolUnbondingPeriodProps) => {
   const { data, isLoading, isError } = useStakingBondingDuration(chainId)
   const { t } = useTranslation()
+  const locale = useDateFnsLocale()
 
   const display = useMemo(
-    () => (data ? formatDistance(0, Number(data?.toString()) || 0) : t("N/A")),
-    [data, t],
+    () => (data ? formatDistance(0, Number(data?.toString()) || 0, { locale }) : t("N/A")),
+    [data, t, locale],
   )
 
   if (isLoading)

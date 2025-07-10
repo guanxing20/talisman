@@ -1,3 +1,4 @@
+import { isNetworkDot, isNetworkEth } from "@talismn/chaindata-provider"
 import { ChainIcon, EyePlusIcon, FilePlusIcon, InfoIcon, PlusIcon } from "@talismn/icons"
 import { classNames } from "@talismn/util"
 import { IS_FIREFOX } from "extension-shared"
@@ -9,7 +10,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "talisman-ui"
 import { EthereumCircleBorderedLogo, PolkadotCircleBorderedLogo } from "@talisman/theme/logos"
 import { AccountTypeNetworkSearch } from "@ui/domains/Account/AccountTypeNetworkSearch"
 import { AllNetworksLogoStack } from "@ui/domains/Account/AllNetworksLogoStack"
-import { useChains, useEvmNetworks } from "@ui/state"
+import { useNetworks } from "@ui/state"
 import { getIsLedgerCapable } from "@ui/util/getIsLedgerCapable"
 
 import { MethodType, useAccountCreateContext } from "./context"
@@ -22,7 +23,7 @@ const methodButtonsFromMethodType = {
 }
 
 export const AccountCreateContainer = ({ className }: { className?: string }) => {
-  const { t } = useTranslation("admin")
+  const { t } = useTranslation()
   const { methodType } = useAccountCreateContext()
   const MethodButtonsComponent = methodButtonsFromMethodType[methodType] ?? null
 
@@ -103,7 +104,7 @@ function MethodTypeTab({
 }
 
 function NewAccountMethodButtons() {
-  const { t } = useTranslation("admin")
+  const { t } = useTranslation()
   const [accountType, setAccountType] = useState<string>()
 
   return (
@@ -141,7 +142,7 @@ function NewAccountMethodButtons() {
 }
 
 function ImportAccountMethodButtons() {
-  const { t } = useTranslation("admin")
+  const { t } = useTranslation()
 
   return (
     <>
@@ -168,7 +169,7 @@ function ImportAccountMethodButtons() {
 }
 
 function ConnectAccountMethodButtons() {
-  const { t } = useTranslation("admin")
+  const { t } = useTranslation()
   const isLedgerCapable = getIsLedgerCapable()
 
   return (
@@ -200,7 +201,7 @@ function ConnectAccountMethodButtons() {
 }
 
 function WatchedAccountMethodButtons() {
-  const { t } = useTranslation("admin")
+  const { t } = useTranslation()
   const [accountType, setAccountType] = useState<string>()
 
   return (
@@ -281,20 +282,22 @@ function AccountTypeMethodButton({
   to?: string
 }) {
   const { t } = useTranslation()
-  const chains = useChains()
-  const ethereumNetworks = useEvmNetworks()
-  const supportedChainIds = useMemo(
-    () =>
-      type === "polkadot"
-        ? [...(chains?.flatMap((c) => (c.account !== "secp256k1" ? c.id : [])) ?? [])]
-        : type === "ethereum"
-          ? [
-              ...(chains?.flatMap((c) => (c.account === "secp256k1" ? c.id : [])) ?? []),
-              ...(ethereumNetworks?.flatMap((c) => c.id) ?? []),
-            ]
-          : [],
-    [chains, ethereumNetworks, type],
-  )
+  const networks = useNetworks()
+
+  const supportedChainIds = useMemo(() => {
+    switch (type) {
+      case "polkadot":
+        return networks
+          .filter(isNetworkDot)
+          .filter((n) => n.account === "*25519")
+          .map((n) => n.id)
+      case "ethereum":
+        return [
+          ...networks.filter(isNetworkDot).filter((n) => n.account === "secp256k1"),
+          ...networks.filter(isNetworkEth),
+        ].map((n) => n.id)
+    }
+  }, [networks, type])
 
   return (
     <AccountCreateMethodButton

@@ -18,7 +18,7 @@ import { useBalancesByParams } from "@ui/hooks/useBalancesByParams"
 import { useTokensMap } from "@ui/state"
 
 export const FooterContent = ({ isTransaction = false }: { isTransaction?: boolean }) => {
-  const { t } = useTranslation("request")
+  const { t } = useTranslation()
   const {
     fee,
     request,
@@ -118,7 +118,7 @@ export const FooterContent = ({ isTransaction = false }: { isTransaction?: boole
 }
 
 const DryRunError: FC = () => {
-  const { t } = useTranslation("request")
+  const { t } = useTranslation()
   const { dryRun } = usePolkadotSigningRequest()
 
   if (!dryRun?.errorMessage) return null
@@ -142,7 +142,7 @@ type FeeDetails = {
 type FeeDetailsRow = { label: string; tokenId: string; plancks: bigint }
 
 const EstimatedFeesRow: FC = () => {
-  const { t } = useTranslation("request")
+  const { t } = useTranslation()
   const {
     fee,
     isLoadingFee,
@@ -155,10 +155,10 @@ const EstimatedFeesRow: FC = () => {
   } = usePolkadotSigningRequest()
   const tokens = useTokensMap()
 
-  const feeToken = useFeeToken(chain?.nativeToken?.id)
+  const feeToken = useFeeToken(chain?.nativeTokenId)
 
   const deliveryFees = useMemo<FeeDetails[]>(() => {
-    if (!chain?.nativeToken?.id || !dryRun?.ok || !dryRun.data.success) return []
+    if (!chain?.nativeTokenId || !dryRun?.ok || !dryRun.data.success) return []
 
     const fees: { plancks: bigint; tokenId: TokenId }[] = []
 
@@ -275,7 +275,7 @@ const FeeInfo = ({
   fees?: FeeDetails[]
   isUnknownFeeToken?: boolean
 }) => {
-  const { t } = useTranslation("request")
+  const { t } = useTranslation()
 
   // extract unique balances and display them at the end
   const feeRows = useMemo<{ label: string; tokenId: string; plancks: bigint }[]>(() => {

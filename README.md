@@ -85,11 +85,7 @@ When building UI features, please follow the following spec to ensure they're tr
 1. Use the hook in your component to get access to the `t` function:
 
    ```tsx
-   // uses the `common` namespace (`apps/extension/public/locales/en/common.json`)
    const { t } = useTranslation()
-
-   // uses the `admin` namespace (`apps/extension/public/locales/en/admin.json`)
-   const { t } = useTranslation("admin")
    ```
 
 1. Wrap any user-visible language in your component with the `t` function:

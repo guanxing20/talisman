@@ -2,7 +2,6 @@ import { typesBundle } from "@polkadot/apps-config/api"
 import { Metadata, TypeRegistry } from "@polkadot/types"
 import { getSpecAlias, getSpecTypes } from "@polkadot/types-known/util"
 import { hexToNumber, isHex } from "@polkadot/util"
-import { Chain } from "@talismn/chaindata-provider"
 import { getMetadataFromDef, getMetadataRpcFromDef, log } from "extension-shared"
 
 import { chaindataProvider } from "../rpcs/chaindata"
@@ -22,15 +21,14 @@ import { getMetadataDef } from "./getMetadataDef"
 export const getTypeRegistry = async (
   chainIdOrHash: string,
   specVersion?: number | string,
-  blockHash?: string,
   signedExtensions?: string[],
 ) => {
   const registry = new TypeRegistry()
 
   // TODO remove type override once chaindata-provider is fixed
-  const chain = (await (isHex(chainIdOrHash)
-    ? chaindataProvider.chainByGenesisHash(chainIdOrHash)
-    : chaindataProvider.chainById(chainIdOrHash))) as Chain | null
+  const chain = await (isHex(chainIdOrHash)
+    ? chaindataProvider.getNetworkByGenesisHash(chainIdOrHash)
+    : chaindataProvider.getNetworkById(chainIdOrHash, "polkadot"))
 
   // register typesBundle in registry for legacy (pre metadata v14) chains
   if (typesBundle.spec && chain?.specName && typesBundle.spec[chain.specName]) {
@@ -50,12 +48,7 @@ export const getTypeRegistry = async (
       registry.setKnownTypes({ typesBundle: legacyTypesBundle })
       if (chain.chainName) {
         registry.register(
-          getSpecTypes(
-            registry,
-            chain.chainName,
-            chain.specName,
-            parseInt(chain.specVersion ?? "0", 10) ?? 0,
-          ),
+          getSpecTypes(registry, chain.chainName, chain.specName, chain.specVersion),
         )
         registry.knownTypes.typesAlias = getSpecAlias(registry, chain.chainName, chain.specName)
       }
@@ -65,7 +58,7 @@ export const getTypeRegistry = async (
   if (chain?.registryTypes) registry.register(chain.registryTypes)
 
   const numSpecVersion = typeof specVersion === "string" ? hexToNumber(specVersion) : specVersion
-  const metadataDef = await getMetadataDef(chainIdOrHash, numSpecVersion, blockHash)
+  const metadataDef = await getMetadataDef(chainIdOrHash, numSpecVersion)
   const metadataRpc = metadataDef ? getMetadataRpcFromDef(metadataDef) : undefined
 
   if (metadataDef) {
@@ -75,13 +68,14 @@ export const getTypeRegistry = async (
       registry.setMetadata(metadata)
     }
 
-    registry.setSignedExtensions(signedExtensions, {
-      ...metadataDef.userExtensions,
-      ...chain?.signedExtensions,
-    })
+    if (signedExtensions || metadataDef.userExtensions || chain?.signedExtensions)
+      registry.setSignedExtensions(signedExtensions, {
+        ...metadataDef.userExtensions,
+        ...chain?.signedExtensions,
+      })
 
     if (!metadataDef.metadataRpc && metadataDef.types) registry.register(metadataDef.types)
-  } else {
+  } else if (signedExtensions || chain?.signedExtensions) {
     registry.setSignedExtensions(signedExtensions, chain?.signedExtensions)
   }
 

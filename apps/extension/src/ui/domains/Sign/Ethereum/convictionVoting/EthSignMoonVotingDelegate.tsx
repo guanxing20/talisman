@@ -8,7 +8,7 @@ import { getContractCallArg } from "../getContractCallArg"
 import { useEthSignKnownTransactionRequest } from "../shared/useEthSignKnownTransactionRequest"
 
 export const EthSignMoonVotingDelegate: FC = () => {
-  const { t } = useTranslation("request")
+  const { t } = useTranslation()
   const { network, decodedTx } = useEthSignKnownTransactionRequest()
 
   const [representative, amount, conviction, trackId] = useMemo(
@@ -22,7 +22,7 @@ export const EthSignMoonVotingDelegate: FC = () => {
   )
 
   if (
-    !network?.nativeToken?.id ||
+    !network?.nativeTokenId ||
     conviction === undefined ||
     amount === undefined ||
     representative === undefined ||
@@ -37,12 +37,12 @@ export const EthSignMoonVotingDelegate: FC = () => {
       header={<SignViewIconHeader icon="vote" />}
     >
       <SignViewVotingDelegate
-        tokenId={network.nativeToken.id}
+        tokenId={network.nativeTokenId}
         conviction={conviction}
         amount={amount}
         representative={representative}
         trackId={trackId}
-        explorerUrl={network.explorerUrl}
+        explorerUrl={network.blockExplorerUrls[0]}
       />
     </SignContainer>
   )

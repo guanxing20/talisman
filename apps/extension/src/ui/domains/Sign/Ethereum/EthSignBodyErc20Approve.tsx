@@ -18,7 +18,7 @@ import { SignParamErc20TokenButton } from "./shared/SignParamErc20TokenButton"
 import { useEthSignKnownTransactionRequest } from "./shared/useEthSignKnownTransactionRequest"
 
 export const EthSignBodyErc20Approve: FC = () => {
-  const { t } = useTranslation("request")
+  const { t } = useTranslation()
   const { account, network, decodedTx, updateCallArg } = useEthSignKnownTransactionRequest()
 
   const erc20Token = useMemo(
@@ -115,7 +115,10 @@ export const EthSignBodyErc20Approve: FC = () => {
       </div>
       <div className="flex">
         <div>{t("from")}</div>
-        <SignParamAccountButton address={account.address} explorerUrl={network.explorerUrl} />
+        <SignParamAccountButton
+          address={account.address}
+          explorerUrl={network.blockExplorerUrls[0]}
+        />
       </div>
     </SignContainer>
   )

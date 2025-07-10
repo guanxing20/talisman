@@ -1,11 +1,12 @@
+import { isTokenNeedExistentialDeposit } from "@talismn/chaindata-provider"
 import { InfoIcon } from "@talismn/icons"
 import { planckToTokens } from "@talismn/util"
+import { log } from "extension-shared"
 import { FC } from "react"
 import { Trans, useTranslation } from "react-i18next"
 import { Button, Drawer } from "talisman-ui"
 
 import { useToken } from "@ui/state"
-import { isSubToken } from "@ui/util/isSubToken"
 
 import { Tokens } from "../../Asset/Tokens"
 import { useSendFunds } from "../useSendFunds"
@@ -15,10 +16,15 @@ type ForfeitDetailsProps = {
   planck: string
 }
 const ForfeitDetails: FC<ForfeitDetailsProps> = ({ tokenId, planck }) => {
-  const { t } = useTranslation("send-funds")
+  const { t } = useTranslation()
   const token = useToken(tokenId)
 
-  if (!isSubToken(token)) return null
+  if (!token) return null
+
+  if (!isTokenNeedExistentialDeposit(token)) {
+    log.warn("ForfeitDetails: Token does not need existential deposit", tokenId)
+    return null
+  }
 
   return (
     <Trans t={t}>
@@ -50,7 +56,7 @@ export const ForfeitWarningDrawer = ({
   close: () => void
   handleAccept: () => void
 }) => {
-  const { t } = useTranslation("send-funds")
+  const { t } = useTranslation()
   const { tokensToBeReaped } = useSendFunds()
 
   return (

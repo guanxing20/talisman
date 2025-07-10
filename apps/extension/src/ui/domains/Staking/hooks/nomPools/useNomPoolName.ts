@@ -1,13 +1,13 @@
-import { Binary } from "@talismn/scale"
+import { DotNetworkId } from "@talismn/chaindata-provider"
 import { useQuery } from "@tanstack/react-query"
-import { ChainId } from "extension-core"
+import { Binary } from "polkadot-api"
 
 import { useScaleApi } from "@ui/hooks/sapi/useScaleApi"
 
 import { cleanupNomPoolName } from "../../helpers"
 
 export const useNomPoolName = (
-  chainId: ChainId | null | undefined,
+  chainId: DotNetworkId | null | undefined,
   poolId: number | string | null | undefined,
 ) => {
   const { data: sapi } = useScaleApi(chainId)

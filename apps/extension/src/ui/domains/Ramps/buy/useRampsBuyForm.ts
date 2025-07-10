@@ -2,13 +2,10 @@ import { encodeAddressSs58, isAddressEqual } from "@talismn/crypto"
 import { isTruthy } from "@talismn/util"
 import { useForm, useStore } from "@tanstack/react-form"
 import {
-  activeChainsStore,
-  activeEvmNetworksStore,
+  activeNetworksStore,
   activeTokensStore,
-  isAccountCompatibleWithChain,
-  isAccountPlatformEthereum,
+  isAccountCompatibleWithNetwork,
 } from "extension-core"
-import { chaindataProvider } from "extension-core/src/rpcs/chaindata"
 import { log } from "extension-shared"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
@@ -18,9 +15,7 @@ import { z } from "zod"
 
 import { notify } from "@talisman/components/Notifications"
 import { useSpecificTokenRates } from "@ui/hooks/useSpecificTokenRates"
-import { getToken$, useAccounts, useChain, useToken } from "@ui/state"
-import { isEvmToken } from "@ui/util/isEvmToken"
-import { isSubToken } from "@ui/util/isSubToken"
+import { getNetworkById$, getToken$, useAccounts, useNetworkById, useToken } from "@ui/state"
 
 import { RampsFormSharedData } from "../shared/types"
 import { RampsBuyQuote, RampsBuyQuoteSuccess } from "./types"
@@ -84,17 +79,15 @@ export const useRampsBuyForm = (defaults: RampsFormSharedData) => {
   const quotes = useRampsBuyQuotes(quoteOpts)
 
   const token = useToken(formData.tokenId)
-  const chain = useChain(token?.chain?.id)
+  const network = useNetworkById(token?.networkId)
   const allAccounts = useAccounts("portfolio")
 
   const accounts = useMemo(
     () =>
-      allAccounts.filter((account) => {
-        if (isEvmToken(token)) return isAccountPlatformEthereum(account)
-        if (isSubToken(token) && chain) return isAccountCompatibleWithChain(chain, account)
-        return false
-      }),
-    [allAccounts, chain, token],
+      allAccounts.filter(
+        (account) => !!network && isAccountCompatibleWithNetwork(network, account),
+      ),
+    [allAccounts, network],
   )
 
   // clear provider choice if the token or currency change
@@ -148,10 +141,11 @@ export const useRampsBuyForm = (defaults: RampsFormSharedData) => {
 const redirectToProvider = async (formData: FormData, quote: RampsBuyQuoteSuccess) => {
   let address = formData.account
 
-  const token = await chaindataProvider.tokenById(formData.tokenId)
-  if (token?.chain?.id) {
-    const chain = await chaindataProvider.chainById(token.chain.id)
-    if (typeof chain?.prefix === "number") address = encodeAddressSs58(address, chain.prefix)
+  const token = await firstValueFrom(getToken$(formData.tokenId))
+  if (token?.networkId) {
+    const chain = await firstValueFrom(getNetworkById$(token.networkId))
+    if (chain?.platform === "polkadot" && chain.account === "*25519")
+      address = encodeAddressSs58(address, chain.prefix)
   }
 
   const url = await quote.getRedirectUrl(address)
@@ -164,9 +158,5 @@ const ensureTokenEnabled = async (tokenId: string) => {
   if (!token) return
 
   await activeTokensStore.setActive(tokenId, true)
-
-  if (isEvmToken(token) && token.evmNetwork?.id)
-    await activeEvmNetworksStore.setActive(token.evmNetwork.id, true)
-  else if (isSubToken(token) && token.chain?.id)
-    await activeChainsStore.setActive(token.chain.id, true)
+  await activeNetworksStore.setActive(token.networkId, true)
 }

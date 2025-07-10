@@ -36,7 +36,7 @@ type ViewDetailsContentProps = {
 }
 
 const Gwei: FC<{ value: bigint | null | undefined }> = ({ value }) => {
-  const { t } = useTranslation("request")
+  const { t } = useTranslation()
   return (
     <>
       {value !== null && value !== undefined
@@ -47,7 +47,7 @@ const Gwei: FC<{ value: bigint | null | undefined }> = ({ value }) => {
 }
 
 const ViewDetailsContent: FC<ViewDetailsContentProps> = ({ onClose }) => {
-  const { t } = useTranslation("request")
+  const { t } = useTranslation()
   const feePriorityOptions = useFeePriorityOptionsUI()
   const {
     request,
@@ -62,7 +62,7 @@ const ViewDetailsContent: FC<ViewDetailsContentProps> = ({ onClose }) => {
   } = useEthSignTransactionRequest()
   const { genericEvent } = useAnalytics()
 
-  const nativeToken = useToken(network?.nativeToken?.id)
+  const nativeToken = useToken(network?.nativeTokenId)
   const formatEthValue = useCallback(
     (value: bigint = 0n) => {
       return value ? `${formatEther(value)} ${nativeToken?.symbol ?? ""}` : null
@@ -136,12 +136,12 @@ const ViewDetailsContent: FC<ViewDetailsContentProps> = ({ onClose }) => {
         <ViewDetailsAddress
           label={t("From")}
           address={request.from}
-          blockExplorerUrl={network?.explorerUrl}
+          blockExplorerUrl={network?.blockExplorerUrls[0]}
         />
         <ViewDetailsAddress
           label={t("To")}
           address={request.to ?? undefined}
-          blockExplorerUrl={network?.explorerUrl}
+          blockExplorerUrl={network?.blockExplorerUrls[0]}
         />
         <ViewDetailsField label={t("Value to be transferred")} breakAll>
           {formatEthValue(transaction?.value)}
@@ -344,7 +344,7 @@ const ViewDetailsContent: FC<ViewDetailsContentProps> = ({ onClose }) => {
 }
 
 export const ViewDetailsEth = () => {
-  const { t } = useTranslation("request")
+  const { t } = useTranslation()
   const { isOpen, open, close } = useOpenClose()
   const { isLoading } = useEthSignTransactionRequest()
 

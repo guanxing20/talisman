@@ -16,7 +16,7 @@ import { useEthSignKnownTransactionRequest } from "./shared/useEthSignKnownTrans
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
 
 export const EthSignBodyErc721Approve: FC = () => {
-  const { t } = useTranslation("request")
+  const { t } = useTranslation()
   const { account, network, decodedTx } = useEthSignKnownTransactionRequest()
 
   const asset = decodedTx.asset as { name?: string; tokenURI?: string } | undefined
@@ -79,7 +79,10 @@ export const EthSignBodyErc721Approve: FC = () => {
       </div>
       <div className="flex max-w-full overflow-hidden">
         <div className="whitespace-nowrap">{t("on behalf of")}</div>
-        <SignParamAccountButton address={account.address} explorerUrl={network.explorerUrl} />
+        <SignParamAccountButton
+          address={account.address}
+          explorerUrl={network.blockExplorerUrls[0]}
+        />
       </div>
       {!!image && (
         <div className="mb-[-0.8rem] mt-12 text-center">
