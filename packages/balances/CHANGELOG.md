@@ -1,5 +1,24 @@
 # @talismn/balances
 
+## 1.0.0
+
+### Major Changes
+
+- d2071a1: BREAKING: chaindata v4
+
+### Patch Changes
+
+- 4008626: pin minimetadata version
+- Updated dependencies [d2071a1]
+- Updated dependencies [d2071a1]
+- Updated dependencies [d2071a1]
+- Updated dependencies [4008626]
+  - @talismn/chaindata-provider@1.0.0
+  - @talismn/token-rates@3.0.0
+  - @talismn/chain-connector-evm@1.0.0
+  - @talismn/chain-connector@1.0.0
+  - @talismn/util@0.4.3
+
 ## 0.9.12
 
 ### Patch Changes

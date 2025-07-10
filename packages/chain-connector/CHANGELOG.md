@@ -1,5 +1,21 @@
 # @talismn/chain-connector
 
+## 1.0.0
+
+### Minor Changes
+
+- d2071a1: removed support for onfinality api keys
+
+### Patch Changes
+
+- Updated dependencies [d2071a1]
+- Updated dependencies [d2071a1]
+- Updated dependencies [d2071a1]
+- Updated dependencies [4008626]
+  - @talismn/chaindata-provider@1.0.0
+  - @talismn/util@0.4.3
+  - @talismn/connection-meta@0.2.18
+
 ## 0.11.1
 
 ### Patch Changes

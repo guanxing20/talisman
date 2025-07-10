@@ -1,5 +1,11 @@
 # @talismn/util
 
+## 0.4.3
+
+### Patch Changes
+
+- d2071a1: feat: isAbortError
+
 ## 0.4.2
 
 ### Patch Changes
