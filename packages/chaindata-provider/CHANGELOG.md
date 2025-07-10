@@ -1,5 +1,19 @@
 # @talismn/chaindata-provider
 
+## 1.0.0
+
+### Major Changes
+
+- d2071a1: BREAKING: chaindata v4
+
+### Minor Changes
+
+- d2071a1: removed support for onfinality api keys
+
+### Patch Changes
+
+- 4008626: pin minimetadata version
+
 ## 0.11.1
 
 ### Patch Changes

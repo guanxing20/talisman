@@ -1,5 +1,29 @@
 # @talismn/balances-react
 
+## 1.0.0
+
+### Major Changes
+
+- d2071a1: BREAKING: chaindata v4
+
+### Minor Changes
+
+- d2071a1: removed support for onfinality api keys
+
+### Patch Changes
+
+- Updated dependencies [d2071a1]
+- Updated dependencies [d2071a1]
+- Updated dependencies [d2071a1]
+- Updated dependencies [4008626]
+  - @talismn/chaindata-provider@1.0.0
+  - @talismn/token-rates@3.0.0
+  - @talismn/balances@1.0.0
+  - @talismn/chain-connector-evm@1.0.0
+  - @talismn/chain-connector@1.0.0
+  - @talismn/util@0.4.3
+  - @talismn/connection-meta@0.2.18
+
 ## 0.9.12
 
 ### Patch Changes
